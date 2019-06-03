@@ -25,6 +25,10 @@ func (s *ServiceManager) Start() {
 	})
 }
 
+func (s ServiceManager) Count() int {
+	return len(s.list)
+}
+
 func NewServiceManager() *ServiceManager {
 	sm := new(ServiceManager)
 	sm.starter = new(sync.Once)
