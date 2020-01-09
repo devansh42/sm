@@ -35,13 +35,8 @@ func NewServiceManager() *ServiceManager {
 	return sm
 }
 
-//s, is the default service manager
-var s = NewServiceManager()
-
 //ServiceManager, it manages services accross the notification service
 type ServiceManager struct {
-	list    []func()
-	starter *sync.Once
-	//running, is a state variable, which says whether service in online or not
-	running bool
+	list []func()
+	*basicServiceManager
 }
