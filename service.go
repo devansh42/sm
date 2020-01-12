@@ -3,8 +3,6 @@
 
 package sm
 
-import "sync"
-
 //AddService, adds a new service in the service queue
 //There will be no effect if process is already started
 func (s *ServiceManager) AddService(f func()) bool {
@@ -31,7 +29,7 @@ func (s ServiceManager) Count() int {
 
 func NewServiceManager() *ServiceManager {
 	sm := new(ServiceManager)
-	sm.starter = new(sync.Once)
+	sm.basicServiceManager = newBasicServiceManager()
 	return sm
 }
 

@@ -1,30 +1,52 @@
 package sm
 
+import (
+	"errors"
+)
+
 type DependencyInjecter interface {
-	Sequence(string) []string
+	Sequence(string) ([]string, error)
 }
 
 //DependentServiceManager is the manager dependent services
 type DependentServiceManager struct {
 	*basicServiceManager
 	deps   DependencyInjecter
-	source string
+	target string
 }
 
-func (d *DependentServiceManager) SetSource(s string) {
-	d.source = s
+//NewDependentServiceManager, returns a new instance of DependentServiceManager
+func NewDependentServiceManager() *DependentServiceManager {
+	x := new(DependentServiceManager)
+	x.basicServiceManager = newBasicServiceManager()
+	return x
 }
 
-//DependentServiceManager, is the service manager for dependent services
-func (d *DependentServiceManager) Start() {
+//SetTarget, sets the name of target Service to launch
+func (d *DependentServiceManager) SetTarget(sourceService string) {
+	d.target = sourceService
+}
+
+//Start, starts Dependent service are per dependency injector
+func (d *DependentServiceManager) Start() (err error) {
+	defer func() { //Recover from panic
+		if errr := recover(); errr != nil {
+			err = errr.(error)
+		}
+	}()
+
 	d.starter.Do(func() {
 
-		var servs map[string]func()
+		var servs = make(map[string]func())
 		for _, v := range d.list {
 			servs[v.Name] = v.Executer
 		}
-		seq := d.deps.Sequence(d.source)
-		s := new(SequentialServiceManager)
+		seq, err := d.deps.Sequence(d.target)
+		if err != nil {
+			panic(err)
+		}
+
+		s := NewSequentialServiceManager()
 		for _, v := range seq {
 			f, ok := servs[v]
 			if !ok { //Checking for occurence
@@ -33,10 +55,12 @@ func (d *DependentServiceManager) Start() {
 			s.AddService(Service{Executer: f})
 		}
 		s.Start()
+
 		for !s.running { //Waiting for Sequential start of services
 		}
 		d.running = true
 	})
+	return
 }
 
 func (d *DependentServiceManager) SetDependencyInjecter(deps DependencyInjecter) {
@@ -63,30 +87,57 @@ func (d *TopologicalDependencyIntjecter) AddDependency(dependent, dependency str
 }
 
 //Sequence, is the topological sequence of our dependency graph
-func (d TopologicalDependencyIntjecter) Sequence(source string) []string {
+func (d TopologicalDependencyIntjecter) Sequence(source string) (sstr []string, err error) {
+
+	//Checking for cycles
+
+	defer func() {
+		if errr := recover(); errr != nil {
+			err = errr.(error) //This will be a cycle error most probably
+			if err != CyclicDependencyError {
+				panic(err)
+			}
+		}
+	}()
+
 	count := 0
 	for range d.adj {
 		count++
 	}
-	head := 0
 	stack := make([]string, count)
+	si := -1
 	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
 	var dfs func(string)
 	dfs = func(node string) {
+
 		if node == "" {
 			return
 		}
 
+		if isv, ok := recStack[node]; ok && isv {
+			panic(CyclicDependencyError)
+		}
+
+		if isv, ok := visited[node]; ok && isv {
+			return
+		}
+
+		visited[node] = true
+		recStack[node] = true
 		for _, v := range d.adj[node] {
-			if isv, ok := visited[v]; ok && isv {
-				continue
-			}
+
 			dfs(v)
 		}
-		stack[head] = node
-		head++
+		si++
+		stack[si] = node
+		recStack[node] = false
 	}
 	dfs(source)
 
-	return stack[:head]
+	sstr = stack[:si+1]
+	return
 }
+
+//CyclicDependencyError, is the error represting cyclic dependency
+var CyclicDependencyError = errors.New("Cycle detected")

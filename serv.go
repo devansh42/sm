@@ -9,6 +9,12 @@ type basicServiceManager struct {
 	list    []Service
 }
 
+func newBasicServiceManager() *basicServiceManager {
+	x := new(basicServiceManager)
+	x.starter = new(sync.Once)
+	return x
+}
+
 func (b basicServiceManager) Count() int {
 	return len(b.list)
 }
@@ -19,7 +25,7 @@ func (b *basicServiceManager) AddService(serv Service) {
 
 type GenericServiceManager interface {
 	//Start, starts a service listed in service manager
-	Start()
+	Start() error
 	//Count, returns the no of services being handled by Service Manager
 	Count() int
 	//AddService, adds the service object to the list of service
