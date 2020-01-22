@@ -79,3 +79,19 @@ func injecterWithCycle() *TopologicalDependencyIntjecter {
 	x.AddDependency(c, a)
 	return x
 }
+
+func TestForArrayBug(t *testing.T) {
+	x := NewTopologicalDependencyInjecter()
+	x.AddDependency("1", "2")
+	x.AddDependency("1", "3")
+	x.AddDependency("3", "4")
+
+	dep, err := x.Sequence("1")
+	if err != nil {
+		t.Log(err)
+
+	} else {
+		t.Log(dep)
+	}
+
+}

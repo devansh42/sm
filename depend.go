@@ -69,20 +69,28 @@ func (d *DependentServiceManager) SetDependencyInjecter(deps DependencyInjecter)
 
 //TopologicalDependencyIntjecter, is the dependency injecter for services
 type TopologicalDependencyIntjecter struct {
-	adj map[string][]string
+	adj       map[string][]string
+	nodeCount int
+	nodes     map[string]bool
 }
 
 //NewTopologicalDependencyInjecter,returns a new dependency injecter
 func NewTopologicalDependencyInjecter() *TopologicalDependencyIntjecter {
 	x := new(TopologicalDependencyIntjecter)
 	x.adj = make(map[string][]string)
+	x.nodes = make(map[string]bool)
 	x.adj[""] = []string{} //For terminal value
 	return x
 }
 
 //AddDependency, adds a dependency of a dependent
 func (d *TopologicalDependencyIntjecter) AddDependency(dependent, dependency string) {
-
+	if _, ok := d.nodes[dependency]; !ok {
+		d.nodeCount++
+	}
+	if _, ok := d.nodes[dependent]; !ok {
+		d.nodeCount++
+	}
 	d.adj[dependent] = append(d.adj[dependent], dependency)
 }
 
@@ -100,10 +108,7 @@ func (d TopologicalDependencyIntjecter) Sequence(source string) (sstr []string, 
 		}
 	}()
 
-	count := 0
-	for range d.adj {
-		count++
-	}
+	count := d.nodeCount
 	stack := make([]string, count)
 	si := -1
 	visited := make(map[string]bool)
